@@ -1,0 +1,51 @@
+(* ========== LITERALS ========== *)
+
+letter_lower = 'a'|'b'|'c'|'d'|'e'|'f'|'g'|'h'|'i'|'j'|'k'|'l'|'m'|'n'|'o'|'p'|'q'|'r'|'s'|'t'|'u'|'v'|'w'|'x'|'y'|'z' ;
+letter_upper = 'A'|'B'|'C'|'D'|'E'|'F'|'G'|'H'|'I'|'J'|'K'|'L'|'M'|'N'|'O'|'P'|'Q'|'R'|'S'|'T'|'U'|'V'|'W'|'X'|'Y'|'Z' ;
+letter       = letter_lower | letter_upper ;
+
+digit_excluding_zero = '1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9' ;
+digit                = '0' | digit_excluding_zero ;
+hexdigit             = digit|'a'|'A'|'b'|'B'|'c'|'C'|'d'|'D'|'e'|'E'|'f'|'F' ;
+octdigit             = '0'|'1'|'2'|'3'|'4'|'5'|'6'|'7' ;
+bindigit             = '0'|'1' ;
+
+decnum  = digit_excluding_zero { digit | '_' } ;
+hexnum  = '0' ('x'|'X') hexdigit { hexdigit | '_' } ;
+octnum  = '0' ('o'|'O') octdigit { octdigit | '_' } ;
+binnum  = '0' ('b'|'B') bindigit { bindigit | '_' } ;
+integer = decnum | hexnum | octnum | binnum ;
+float   = ( '0'| decnum ) '.' { digit | '_' } ;
+imagnum = (decnum | float) ('j'|'J') ;
+number  = integer | imagnum | float ;
+
+character = '\'' ? any character ? '\'' ;
+string    = '"' { ? any character ? } '"' ;
+
+(* ========== EXPRESSIONS ========== *)
+
+(* Comparison operators *)
+
+comparison = bitwise_or { ('<'|'>'|'=='|'>='|'<='|'!=') bitwise_or } ;
+
+(* Bitwise operators *)
+
+bitwise_or = bitwise_xor { '|' bitwise_xor } ;
+bitwise_xor = bitwise_and { '^' bitwise_and } ;
+bitwise_and = shift_expr { '&' shift_expr } ;
+shift_expr = sum { ('<<'|'>>') sum} ;
+
+(* Arithmetic operators *)
+
+sum  = term { ('+'|'-') term } ;
+term = factor { ('*'|'/'|'%') factor } ;
+factor =
+    ('+'|'-'|'~') factor
+    | power ;
+
+power = atom [ '**' factor ] ;
+
+atom =
+    number
+    | character
+    | string
