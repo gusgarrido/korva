@@ -5,6 +5,24 @@
 
 #include "result.h"
 
+void print_result(Result res)
+{
+    printf("[RESULT: %d] ", res.code);
+    if (res.code == 0)
+    {
+        // TODO: Print out res.value
+        printf("\n");
+        return;
+    }
+    printf("%s\n", res.message);
+    if (res.value == NULL)
+        return;
+
+    Result *next = (Result *)res.value;
+    printf("[RESULT] The above error was caused by:\n");
+    print_result(*next);
+}
+
 const Result result_ok(const void *value)
 {
     Result res = {.value = value, .code = 0, .message = NULL};

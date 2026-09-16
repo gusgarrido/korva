@@ -1,11 +1,14 @@
 #ifndef RESULT_H
 #define RESULT_H
 
-typedef struct {
+typedef struct
+{
     const void *value;
     const char *message;
     const int code;
 } Result;
+
+void print_result(Result res);
 
 const Result result_ok(const void *value);
 const Result result_err(const int code, const char *message);
