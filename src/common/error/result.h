@@ -7,8 +7,8 @@ typedef struct {
     const int code;
 } Result;
 
-const Result return_ok(const void *value);
-const Result return_err(const int code, const char *message);
-const Result return_fromerr(const Result *err, const char *message);
+const Result result_ok(const void *value);
+const Result result_err(const int code, const char *message);
+const Result result_fromerr(const Result *err, const char *message);
 
 #endif

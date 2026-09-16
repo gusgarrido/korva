@@ -13,25 +13,25 @@ static Result add_token(Token **tokens, const char *lexeme, size_t *count, size_
 {
     if (!lexeme)
     {
-        return return_err(1, "NULL lexeme provided.");
+        return result_err(1, "NULL lexeme provided.");
     }
 
     Token *tmp = realloc(*tokens, (*count + 1) * sizeof(Token));
     if (tmp == NULL)
     {
-        return return_err(1, "Failed to allocate memory.");
+        return result_err(1, "Failed to allocate memory.");
     }
 
     Token token = create_token(lexeme, lineno, colno);
     if (token.token == OP)
     {
-        return return_err(1, "Failed to allocate memory.");
+        return result_err(1, "Failed to allocate memory.");
     }
 
     tmp[*count] = token;
     *tokens = tmp;
     (*count)++;
-    return return_ok(0);
+    return result_ok(0);
 }
 
 void print_token(Token token)
@@ -123,7 +123,7 @@ Result tokenize(Token **tokens, const char *content)
             Result res = add_token(tokens, operator, &token_count, lineno, colno);
             colno += strlen(operator);
             if (res.code != 0)
-                return return_fromerr(&res, "Failed to create token.");
+                return result_fromerr(&res, "Failed to create token.");
             continue;
         }
         // NUMBER LITERALS
@@ -150,7 +150,7 @@ Result tokenize(Token **tokens, const char *content)
                     if (res.code != 0)
                     {
                         free(token);
-                        return return_fromerr(&res, "Failed to create token.");
+                        return result_fromerr(&res, "Failed to create token.");
                     }
                     free(token);
                     continue;
@@ -163,7 +163,7 @@ Result tokenize(Token **tokens, const char *content)
             if (res.code != 0)
             {
                 free(bit);
-                return return_fromerr(&res, "Failed to create token.");
+                return result_fromerr(&res, "Failed to create token.");
             }
             free(bit);
             continue;
@@ -197,7 +197,7 @@ Result tokenize(Token **tokens, const char *content)
                     terminated = 1;
             }
             if (escaped || !terminated)
-                return return_err(1, "Unterminated string literal.");
+                return result_err(1, "Unterminated string literal.");
 
             size_t token_len = reader.index - start;
             reader.index = start;
@@ -208,7 +208,7 @@ Result tokenize(Token **tokens, const char *content)
             if (res.code != 0)
             {
                 free(token);
-                return return_fromerr(&res, "Failed to create token.");
+                return result_fromerr(&res, "Failed to create token.");
             }
             free(token);
             continue;
@@ -223,7 +223,7 @@ Result tokenize(Token **tokens, const char *content)
             if (res.code != 0)
             {
                 free(token);
-                return return_fromerr(&res, "Failed to create token.");
+                return result_fromerr(&res, "Failed to create token.");
             }
             free(token);
             continue;
@@ -239,7 +239,7 @@ Result tokenize(Token **tokens, const char *content)
             lineno++;
         }
         else
-            return return_err(1, "Unrecognized character.");
+            return result_err(1, "Unrecognized character.");
     }
-    return return_ok((void *)(uintptr_t) token_count);
+    return result_ok((void *)(uintptr_t) token_count);
 }
