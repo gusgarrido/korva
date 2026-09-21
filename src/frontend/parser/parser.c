@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -12,21 +13,20 @@ void rollback_token(TokenStream *stream)
     stream->index = stream->previous;
 }
 
-Token *consume_token(TokenStream *stream)
+Result consume_token(TokenStream *stream)
 {
     if (stream->index >= stream->length)
-        return NULL;
+        return result_err(1, "Stream index out of bounds");
     
     stream->previous = stream->index;
     Token *token = stream->tokens[stream->index++];
-    return token;
+    return result_ok(token);
 }
 
-int parse(Token **tokens, size_t size)
+Result parse(Token **tokens, size_t size)
 {
     if (!tokens || !tokens[0])
-        return 0;
+        return result_ok((uintptr_t)0);
     TokenStream tstream = {tokens, size, 0, 0};
-    consume_comparison(&tstream);
-    return 0;
+    return consume_comparison(&tstream);
 }

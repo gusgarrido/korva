@@ -1,6 +1,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include "common/error/result.h"
+
 #include "../token.h"
 
 typedef struct {
@@ -10,9 +12,9 @@ typedef struct {
     size_t previous;
 } TokenStream;
 
-int parse(Token **tokens, size_t size);
+Result parse(Token **tokens, size_t size);
 void rollback_token(TokenStream *stream);
-Token *consume_token(TokenStream *stream);
+Result consume_token(TokenStream *stream);
 
 
 #endif

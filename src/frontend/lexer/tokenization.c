@@ -31,7 +31,7 @@ static Result add_token(Token **tokens, const char *lexeme, size_t *count, size_
     tmp[*count] = token;
     *tokens = tmp;
     (*count)++;
-    return result_ok(0);
+    return result_ok((uintptr_t)0);
 }
 
 void print_token(Token token)
@@ -241,5 +241,5 @@ Result tokenize(Token **tokens, const char *content)
         else
             return result_err(1, "Unrecognized character.");
     }
-    return result_ok((void *)(uintptr_t) token_count);
+    return result_ok((void *)(uintptr_t)token_count);
 }

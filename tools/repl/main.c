@@ -16,6 +16,7 @@ int main(int argc, char **argv)
         if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
             Token *tokens = NULL;
             Result result = tokenize(&tokens, buffer);
+            print_result(result);
             if (result.code != 0) {
                 continue;
             }
@@ -26,7 +27,7 @@ int main(int argc, char **argv)
 
             printf("\n");
 
-            if (parse(tokens, token_len) == 0) {
+            if (parse(&tokens, token_len).code != 0) {
                 continue;
             }
             printf("Parsed %ld items:\n", token_len);
