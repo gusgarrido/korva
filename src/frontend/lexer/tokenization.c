@@ -12,21 +12,15 @@
 static Result add_token(Token **tokens, const char *lexeme, size_t *count, size_t lineno, size_t colno)
 {
     if (!lexeme)
-    {
         return result_err(1, "NULL lexeme provided.");
-    }
 
     Token *tmp = realloc(*tokens, (*count + 1) * sizeof(Token));
     if (tmp == NULL)
-    {
         return result_err(1, "Failed to allocate memory.");
-    }
 
     Token token = create_token(lexeme, lineno, colno);
     if (token.token == OP)
-    {
         return result_err(1, "Failed to allocate memory.");
-    }
 
     tmp[*count] = token;
     *tokens = tmp;
