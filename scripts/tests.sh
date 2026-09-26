@@ -18,7 +18,7 @@ function run_module {
 
     output=$(
         while IFS= read -r -d '' test; do
-            echo -n -e "   \e[1;35mTesting \e[0;33m$test\e[30m..." >&2
+            echo -n -e "\t\e[1;30mTesting \e[0;33m$test\e[30m..." >&2
             "$test"
             status=$?
             if (( status == 0 )); then
@@ -34,7 +34,7 @@ function run_module {
     ) || status=$?
 
     if (( status == 0 )); then
-        echo -e "\e[42mAll tests passed successfully.\e[0m"
+        echo -e "\e[42mAll tests passed successfully.\e[0m\n"
     else
         echo -e "\n$output"
     fi
@@ -50,7 +50,7 @@ function check_leaks {
     echo -e "\e[44m[*]\e[0m Checking for memory leaks..."
 
     while IFS= read -r -d '' test; do
-        echo -n -e "   \e[1;35mAnalyzing \e[0;33m$test\e[30m..." >&2
+        echo -n -e "\t\e[1;30mAnalyzing \e[0;33m$test\e[30m..." >&2
 
         set +e
         output=$(valgrind -q --leak-check=summary --error-exitcode=1 "./$test" 2>&1)
@@ -61,7 +61,7 @@ function check_leaks {
             echo -e " \e[1;32mAll bytes accounted for\e[0m" >&2
         else
             echo -e " \e[1;41mPossible leakage detected\e[0m" >&2
-            echo -e "      \e[30mRun \e[34m'valgrind --track-origins=yes --leak-check=full ./$test'\e[0m \e[30mfor further debugging.\e[0m"
+            echo -e "\t\t\e[30mRun \e[34m'valgrind --track-origins=yes --leak-check=full ./$test'\e[0m \e[30mfor further debugging.\e[0m"
         fi
         
     done < <(
@@ -76,8 +76,8 @@ else
     echo -e "\e[1mExecuting tests for modules\e[0m $*\e[1m.\e[0m"
 fi
 
-if [ ! command -v valgrind >/dev/null 2>&1 ]; then
-    echo -e "\e[1;43mWARNING: valgrind is not installed. Memory leaks will not be checked.\e[0m"
+if ! command -v valgrind >/dev/null 2>&1; then
+    echo -e "\n\e[1;30;43mWARNING:\e[0m valgrind not found. Memory leak checks will \e[1;4mNOT\e[0m run.\n"
 fi
 
 for module in "$@"; do
