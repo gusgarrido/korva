@@ -13,33 +13,31 @@ make build 1> /dev/null
 make tests 1> /dev/null
 
 function run_module {
-    local output
-    local status=0
+    local failed=0
 
-    output=$(
-        while IFS= read -r -d '' test; do
-            echo -n -e "\t\e[1;30mTesting \e[0;33m$test\e[30m..." >&2
-            "$test"
+    while IFS= read -r -d '' test; do
+        echo -n -e "\t\e[1;30mTesting \e[0;33m$test\e[30m... " >&2
+
+        if output=$("$test" 2>&1); then
+            echo -e "\e[1;32mPassed\e[0m" >&2
+        else
             status=$?
-            if (( status == 0 )); then
-                echo -e " \e[1;32mPassed\e[0m" >&2
-                continue
-            fi
-            echo -e " \e[1;31mFailed\e[0m" >&2
-            exit $status
-            
-        done < <(
-            find "build/tests/$1" -type f -name 'test_*' -executable -print0
-        )
-    ) || status=$?
+            ((++failed))
+            echo -e "\e[1;31mFailed (exit $status)\e[0m" >&2
+            echo -e "\t\t$output\e[0m"
+        fi
+    done < <(
+        find "build/tests/$1" -type f -name 'test_*' -executable -print0
+    )
+    
 
-    if (( status == 0 )); then
+    if (( failed == 0 )); then
         echo -e "\e[42mAll tests passed successfully.\e[0m\n"
     else
-        echo -e "\n$output"
+        echo -e "\e[41mEncountered $failed tests that did not pass.\e[0m\n"
     fi
 
-    return "$status"
+    return "$failed"
 }
 
 function check_leaks {
@@ -80,12 +78,17 @@ if ! command -v valgrind >/dev/null 2>&1; then
     echo -e "\n\e[1;30;43mWARNING:\e[0m valgrind not found. Memory leak checks will \e[1;4mNOT\e[0m run.\n"
 fi
 
+exitcode=0
+
 for module in "$@"; do
     echo -e "\e[44m[*]\e[0m Running module \e[1;34m$module\e[0m:"
-    run_module "$module"
-    if [ $? -eq 0 ]; then
-        check_leaks "$module"
+    if ! run_module "$module"; then
+        exitcode=1
+        continue
     fi
+    check_leaks "$module"
 done
 
 echo -e "\e[1mFinished performing all tasks.\e[0m"
+
+exit "$exitcode"
