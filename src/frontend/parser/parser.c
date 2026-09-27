@@ -14,13 +14,12 @@ Result consume_token(TokenStream *stream)
         return result_err(1, "Stream index out of bounds");
     
     stream->previous = stream->index;
-    Token *token = stream->tokens[stream->index++];
-    return result_ok(token);
+    return result_ok(&stream->tokens[stream->index++]);
 }
 
-Result parse(Token **tokens, size_t size)
+Result parse(Token *tokens, size_t size)
 {
-    if (!tokens || !tokens[0])
+    if (!tokens)
         return result_ok((uintptr_t)0);
     TokenStream tstream = {tokens, size, 0, 0};
     return consume_comparison(&tstream);

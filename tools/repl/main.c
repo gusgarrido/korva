@@ -27,7 +27,7 @@ int main(int argc, char **argv)
 
             printf("\n");
 
-            if (parse(&tokens, token_len).code != 0) {
+            if (parse(tokens, token_len).code != 0) {
                 continue;
             }
             printf("Parsed %ld items:\n", token_len);
