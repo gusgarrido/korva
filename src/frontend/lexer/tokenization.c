@@ -60,7 +60,6 @@ static Result handle_result(Result (*token_func)(Reader *), Reader *reader, Toke
         return result_fromerr(token_res, "Failed to consume item");
     if (token_res.code < 0)
         return result_fromerr(token_res, "Token does not match consume criteria");
-    printf("%ld:%ld -> %ld:%ld\n", lineno, colno, reader->pos.lineno, reader->pos.colno);
     char *token = (char *)token_res.value;
     Result res = add_token(tokens, token, token_count, lineno, colno);
     free(token);
@@ -71,7 +70,6 @@ Result tokenize(Token **tokens, const char *content)
 {
     size_t token_count = 0;
     Reader reader = {.buffer = content, .end = strlen(content), .pos = {0, 1, 1}, .previous = {0, 1, 1}};
-    printf("\n'%s'\n", content);
     while (!is_eof(reader))
     {
         Result com = consume_comment(&reader);
