@@ -1,6 +1,12 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "result.h"
+
+void free_result(const Result res) {
+    if (res.code != 0 && res.value != NULL)
+        free(res.value);
+}
 
 void print_result(Result res)
 {
@@ -18,6 +24,8 @@ void print_result(Result res)
     Result *next = (Result *)res.value;
     printf("[RESULT] The above error was caused by:\n");
     print_result(*next);
+    if (next->value == NULL)
+        printf("[RESULT] End of traceback.\n\n");
 }
 
 const Result result_ok(const void *value)
@@ -32,8 +40,15 @@ const Result result_err(const int code, const char *message)
     return res;
 }
 
-const Result result_fromerr(const Result *err, const char *message)
+const Result result_fromerr(const Result err, const char *message)
 {
-    Result res = {.value = err, .code = err->code, .message = message};
+    Result *cpy = malloc(sizeof(Result));
+    if (cpy != NULL)
+    {
+        cpy->code = err.code;
+        cpy->message = err.message;
+        cpy->value = NULL;
+    }
+    Result res = {.value = cpy, .code = err.code, .message = message};
     return res;
 }

@@ -4,10 +4,17 @@
 #include <stddef.h>
 
 typedef struct {
+    size_t index;
+    size_t lineno;
+    size_t colno;
+} Position;
+
+typedef struct {
     const char *buffer;
     const size_t end;
-    size_t index;
-    size_t previous;
+
+    Position pos;
+    Position previous;
 } Reader;
 
 int is_eof(const Reader reader);

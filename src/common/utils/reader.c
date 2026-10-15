@@ -3,12 +3,34 @@
 
 #include "reader.h"
 
+static void update_curpos(const char c, Reader *reader)
+{
+    reader->previous.index = reader->pos.index;
+    reader->previous.lineno = reader->pos.lineno;
+    reader->previous.colno = reader->pos.colno;
+
+    reader->pos.index++;
+    switch (c)
+    {
+    case '\n':
+        reader->pos.lineno++;
+        reader->pos.colno = 1;
+        break;
+    case '\t':
+        reader->pos.colno += 4;
+        break;
+    default:
+        reader->pos.colno++;
+        break;
+    }
+}
+
 /**
  * Checks whether the provided Reader has reached end of file (EOF).
  */
 int is_eof(const Reader reader)
 {
-    return reader.index >= reader.end;
+    return reader.pos.index >= reader.end;
 }
 
 /**
@@ -26,7 +48,7 @@ int is_whitespace(const char c)
  */
 char current(const Reader reader)
 {
-    return reader.buffer[reader.index];
+    return reader.buffer[reader.pos.index];
 }
 
 /**
@@ -34,7 +56,9 @@ char current(const Reader reader)
  */
 void undo(Reader *reader)
 {
-    reader->index = reader->previous;
+    reader->pos.index = reader->previous.index;
+    reader->pos.lineno = reader->previous.lineno;
+    reader->pos.colno = reader->previous.colno;
 }
 
 /**
@@ -43,8 +67,9 @@ void undo(Reader *reader)
  */
 char consume(Reader *reader)
 {
-    reader->previous = reader->index;
-    return reader->buffer[reader->index++];
+    char c = reader->buffer[reader->pos.index];
+    update_curpos(c, reader);
+    return c;
 }
 
 /**
@@ -53,16 +78,17 @@ char consume(Reader *reader)
  */
 char *read(Reader *reader, size_t size)
 {
-    if (reader->index + size > reader->end)
+    if (reader->pos.index + size > reader->end)
         return NULL;
     char *dest = malloc(size + 1);
     if (dest == NULL)
         return NULL;
-    const char *src = reader->buffer + reader->index;
+    const char *src = reader->buffer + reader->pos.index;
     memcpy(dest, src, size);
     dest[size] = '\0';
-    reader->previous = reader->index;
-    reader->index += size;
+    for (size_t i = 0; i < size; i++) {
+        update_curpos(dest[i], reader);
+    }
     return dest;
 }
 
@@ -70,7 +96,7 @@ static char *read_cond(Reader *reader, int (*check)(char), int invert)
 {
     size_t i = 0;
     int in_word = 0;
-    size_t start = reader->index;
+    Position start = reader->pos;
     while (!is_eof(*reader))
     {
         char c = consume(reader);
@@ -84,7 +110,7 @@ static char *read_cond(Reader *reader, int (*check)(char), int invert)
         in_word = 1;
         i++;
     }
-    reader->index = start;
+    reader->pos = start;
     return read(reader, i);
 }
 

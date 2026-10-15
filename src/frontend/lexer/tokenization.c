@@ -1,4 +1,3 @@
-#include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,18 +8,20 @@
 
 #include "../token.h"
 
+#include "consumers.h"
+
 static Result add_token(Token **tokens, const char *lexeme, size_t *count, size_t lineno, size_t colno)
 {
-    if (!lexeme)
-        return result_err(1, "NULL lexeme provided.");
+    if (lexeme == NULL)
+        return result_err(1, "NULL lexeme provided");
 
     Token *tmp = realloc(*tokens, (*count + 1) * sizeof(Token));
     if (tmp == NULL)
-        return result_err(1, "Failed to allocate memory.");
+        return result_err(1, "Out of memory");
 
     Token token = create_token(lexeme, lineno, colno);
     if (token.token == OP)
-        return result_err(1, "Failed to allocate memory.");
+        return result_err(1, "Out of memory");
 
     tmp[*count] = token;
     *tokens = tmp;
@@ -49,191 +50,60 @@ void free_tokens(Token **tokens, size_t size)
     *tokens = NULL;
 }
 
+static Result handle_result(Result (*token_func)(Reader *), Reader *reader, Token **tokens, size_t *token_count)
+{
+    size_t lineno = reader->pos.lineno;
+    size_t colno = reader->pos.colno;
+    Result token_res = token_func(reader);
+
+    if (token_res.code > 0)
+        return result_fromerr(token_res, "Failed to consume item");
+    if (token_res.code < 0)
+        return result_fromerr(token_res, "Token does not match consume criteria");
+    printf("%ld:%ld -> %ld:%ld\n", lineno, colno, reader->pos.lineno, reader->pos.colno);
+    char *token = (char *)token_res.value;
+    Result res = add_token(tokens, token, token_count, lineno, colno);
+    free(token);
+    return res;
+}
+
 Result tokenize(Token **tokens, const char *content)
 {
     size_t token_count = 0;
-    size_t lineno = 1;
-    size_t colno = 1;
-    size_t len = strlen(content);
-    Reader reader = {.buffer = content, .end = len, .index = 0, .previous = 0};
+    Reader reader = {.buffer = content, .end = strlen(content), .pos = {0, 1, 1}, .previous = {0, 1, 1}};
+    printf("\n'%s'\n", content);
     while (!is_eof(reader))
     {
-        char c = consume(&reader);
+        Result com = consume_comment(&reader);
+        if (com.code == 0)
+            continue;
+        Result op = handle_result(consume_operator, &reader, tokens, &token_count);
+        if (op.code > 0)
+            return result_fromerr(op, "Failed to consume operator");
+        else if (op.code == 0)
+            continue;
 
-        // COMMENTS
-        if (c == '/')
-        {
-            char next = current(reader);
-            if (next == '/')
-            {
-                consume(&reader);
-                while (!is_eof(reader) && current(reader) != '\n')
-                    consume(&reader);
-                // We are going to handle the new line on the next iteration
-                continue;
-            }
-            else if (next == '*')
-            {
-                consume(&reader);
-                colno += 2;
-                while (!is_eof(reader))
-                {
-                    char cur = consume(&reader);
-                    colno += cur == '\t' ? 4 : 1;
-                    if (cur == '\n')
-                    {
-                        colno = 1;
-                        lineno++;
-                    }
-                    if (cur == '*' && current(reader) == '/')
-                    {
-                        colno++;
-                        consume(&reader);
-                        break;
-                    }
-                }
-                continue;
-            }
-        }
-        // OPERATORS
-        if (is_operator_onechar(c))
-        {
-            char operator[8] = {c, '\0'};
-            while (!is_eof(reader) && is_operator(operator))
-            {
-                char next = current(reader);
-                if (!is_operator_onechar(next))
-                    break;
-                consume(&reader);
-                size_t len = strlen(operator);
-                operator[len] = next;
-                operator[len + 1] = '\0';
-            }
-            if (!is_operator(operator))
-            {
-                operator[strlen(operator) - 1] = '\0';
-                undo(&reader);
-            }
-            Result res = add_token(tokens, operator, &token_count, lineno, colno);
-            colno += strlen(operator);
-            if (res.code != 0)
-                return result_fromerr(&res, "Failed to create token.");
+        Result numlit = handle_result(consume_numlit, &reader, tokens, &token_count);
+        if (numlit.code > 0)
+            return result_fromerr(numlit, "Failed to consume number literal");
+        else if (numlit.code == 0)
             continue;
-        }
-        // NUMBER LITERALS
-        if (isdigit(c))
-        {
-            undo(&reader);
-            size_t start = reader.index;
-            char *bit = read_while(&reader, is_identifier);
-            // Check if we can keep parsing as a floating-point number
-            // Otherwise, add what we have and continue
-            if (current(reader) == '.')
-            {
-                consume(&reader);
-                if (isdigit(current(reader)))
-                {
-                    char *next = read_while(&reader, is_identifier);
-                    size_t token_len = strlen(bit) + strlen(next) + 1;
-                    free(bit);
-                    free(next);
-                    reader.index = start;
-                    char *token = read(&reader, token_len);
-                    Result res = add_token(tokens, token, &token_count, lineno, colno);
-                    colno += token_len;
-                    if (res.code != 0)
-                    {
-                        free(token);
-                        return result_fromerr(&res, "Failed to create token.");
-                    }
-                    free(token);
-                    continue;
-                }
-                else
-                    undo(&reader);
-            }
-            Result res = add_token(tokens, bit, &token_count, lineno, colno);
-            colno += strlen(bit);
-            if (res.code != 0)
-            {
-                free(bit);
-                return result_fromerr(&res, "Failed to create token.");
-            }
-            free(bit);
-            continue;
-        }
-        // STRING LITERALS
-        if (c == '"' || c == '\'')
-        {
-            size_t start = reader.index - 1; // start from the quotation mark
-            int escaped = 0;
-            int terminated = 0;
-            size_t new_lineno = lineno;
-            size_t new_colno = colno + 1;
-            while (!is_eof(reader) && !terminated)
-            {
-                char cur = consume(&reader);
-                new_colno += cur == '\t' ? 4 : 1;
-                if (cur == '\n')
-                {
-                    new_lineno++;
-                    new_colno = 1;
-                }
-                if (escaped)
-                {
-                    escaped = 0;
-                    continue;
-                }
 
-                if (cur == '\\')
-                    escaped = 1;
-                else if (cur == c && !escaped)
-                    terminated = 1;
-            }
-            if (escaped || !terminated)
-                return result_err(1, "Unterminated string literal.");
+        Result strlit = handle_result(consume_strlit, &reader, tokens, &token_count);
+        if (strlit.code > 0)
+            return result_fromerr(strlit, "Failed to consume string literal");
+        else if (strlit.code == 0)
+            continue;
 
-            size_t token_len = reader.index - start;
-            reader.index = start;
-            char *token = read(&reader, token_len);
-            Result res = add_token(tokens, token, &token_count, lineno, colno);
-            lineno = new_lineno;
-            colno = new_colno;
-            if (res.code != 0)
-            {
-                free(token);
-                return result_fromerr(&res, "Failed to create token.");
-            }
-            free(token);
+        Result identifier = handle_result(consume_identifier, &reader, tokens, &token_count);
+        if (identifier.code > 0)
+            return result_fromerr(identifier, "Failed to consume identifier");
+        else if (identifier.code == 0)
             continue;
-        }
-        // IDENTIFIERS
-        if (isalpha(c) || c == '_')
-        {
-            undo(&reader);
-            char *token = read_while(&reader, is_identifier);
-            Result res = add_token(tokens, token, &token_count, lineno, colno);
-            colno += strlen(token);
-            if (res.code != 0)
-            {
-                free(token);
-                return result_fromerr(&res, "Failed to create token.");
-            }
-            free(token);
-            continue;
-        }
-        // WHITESPACES
-        if (c == ' ')
-            colno++;
-        else if (c == '\t')
-            colno += 4;
-        else if (c == '\n')
-        {
-            colno = 1;
-            lineno++;
-        }
-        else
-            return result_err(1, "Unrecognized character.");
+
+        if (!is_whitespace(current(reader)))
+            return result_err(1, "Unrecognizable character");
+        consume(&reader);
     }
     return result_ok((void *)(uintptr_t)token_count);
 }
