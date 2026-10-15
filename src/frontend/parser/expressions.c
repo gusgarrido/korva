@@ -8,7 +8,7 @@ Result consume_atom(TokenStream *stream)
 {
     Result res = consume_token(stream);
     if (res.code != 0)
-        return result_fromerr(&res, "Failed to consume token");
+        return result_fromerr(res, "Failed to consume token");
     Token *token = (Token *)res.value;
 
     if (is_number(token->lexeme) || is_character(token->lexeme) || is_string(token->lexeme))
@@ -21,18 +21,18 @@ Result consume_power(TokenStream *stream)
 {
     Result atom_res = consume_atom(stream);
     if (atom_res.code != 0)
-        return result_fromerr(&atom_res, "Failed to retrieve atom");
+        return result_fromerr(atom_res, "Failed to retrieve atom");
     // We don't really need the value from consume_atom, since it's always 1 if no failure.
 
     Result token_res = consume_token(stream);
     if (token_res.code != 0)
-        return result_fromerr(&token_res, "Failed to retrieve token");
+        return result_fromerr(token_res, "Failed to retrieve token");
     Token *obj = (Token *)token_res.value;
     if (obj->token == DOUBLESTAR)
     {
         Result maybe_res_factor = consume_factor(stream);
         if (maybe_res_factor.code != 0)
-            return result_fromerr(&maybe_res_factor, "Failed to retrieve factor");
+            return result_fromerr(maybe_res_factor, "Failed to retrieve factor");
         int maybe_factor = (uintptr_t)maybe_res_factor.value;
         if (maybe_factor == 0)
         {
@@ -50,14 +50,14 @@ Result consume_factor(TokenStream *stream)
 {
     Result token_res = consume_token(stream);
     if (token_res.code != 0)
-        return result_fromerr(&token_res, "Failed to retrieve token");
+        return result_fromerr(token_res, "Failed to retrieve token");
     Token *obj = (Token *)token_res.value;
 
     if (obj->token == PLUS || obj->token == MINUS || obj->token == TILDE)
     {
         Result maybe_res_factor = consume_factor(stream);
         if (maybe_res_factor.code != 0)
-            return result_fromerr(&maybe_res_factor, "Failed to retrieve factor");
+            return result_fromerr(maybe_res_factor, "Failed to retrieve factor");
         int maybe_factor = (uintptr_t)maybe_res_factor.value;
         if (maybe_factor == 0)
         {
@@ -89,19 +89,19 @@ static Result _consume_greedy(
 {
     Result maybe_res_token = consume_item(stream);
     if (maybe_res_token.code != 0)
-        return result_fromerr(&maybe_res_token, "Failed to retrieve item");
+        return result_fromerr(maybe_res_token, "Failed to retrieve item");
     int maybe_token = (uintptr_t)maybe_res_token.value;
 
     Result obj = consume_token(stream);
     if (obj.code != 0)
-        return result_fromerr(&obj, "Failed to retrieve token");
+        return result_fromerr(obj, "Failed to retrieve token");
     Token *maybe_operator = (Token *)obj.value;
     int maybe_sep = _is_sep(maybe_operator->token, sep, sep_len);
     while (maybe_sep)
     {
         Result maybe_res_other = consume_item(stream);
         if (maybe_res_other.code != 0)
-            return result_fromerr(&maybe_res_other, "Failed to retieve item");
+            return result_fromerr(maybe_res_other, "Failed to retieve item");
         int maybe_other = (uintptr_t)maybe_res_other.value;
         if (maybe_other == 0)
         {
@@ -112,7 +112,7 @@ static Result _consume_greedy(
         maybe_token += maybe_other + 1; // add consumed item and operator
         Result obj = consume_token(stream);
         if (obj.code != 0)
-            return result_fromerr(&obj, "Failed to retrieve token");
+            return result_fromerr(obj, "Failed to retrieve token");
         maybe_operator = (Token *)obj.value;
         maybe_sep = _is_sep(maybe_operator->token, sep, sep_len);
     }
